@@ -1,30 +1,45 @@
-"use strict";
+'use strict';
 
-const BASE_URL = "https://api.tvmaze.com";
+const BASE_URL = 'https://api.tvmaze.com';
 const DEFAULT_IMAGE = `https://store-images.s-microsoft.com/image/apps.65316.13510798887490672.6e1ebb25-96c8-4504-b714-1f7cbca3c5ad.f9514a23-1eb8-4916-a18e-99b1a9817d15?mode=scale&q=90&h=300&w=300`;
 
-const $showsList = $("#showsList");
-const $episodesArea = $("#episodesArea");
-const $searchForm = $("#searchForm");
+const $showsList = $('#showsList');
+const $episodesArea = $('#episodesArea');
+const $searchForm = $('#searchForm');
 const searchTerm = $searchForm.val();
 
+// Class for each show in search result.
+// Checks if image is null, sets default if true.
 class Show {
-  constructor(id, summary, name, image) {
-    this.id = id;
-    this.name = name;
-    this.summary = summary;
-    this.image = this.imageCheck(image);;
-
-
+  constructor(showCard) {
+    this.id = showCard.id;
+    this.name = showCard.name;
+    this.summary = showCard.summary;
+    this.image = this.imageCheck(showCard);
   }
 
-  imageCheck(image) {
-    if (image?.original === null) {
-      console.log('image=', image)
-      this.image = DEFAULT_IMAGE;
+  imageCheck(showCard) {
+    if (showCard.image === null) {
+      // console.log('image=', showCard.image.original);
+      return DEFAULT_IMAGE;
     } else {
-      this.image = image.original;
+      return showCard.image.original;
     }
+  }
+}
+
+// Class for each episode
+// method GiveMeAListItem returns the raw HTML of a list item with episode information.
+class Episode extends Show {
+  constructor(showCard) {
+    super(showCard);
+    this.id = showCard.id;
+    this.number = showCard.number;
+    this.name = showCard.name;
+    this.season = showCard.season;
+  }
+  giveMeAListItem() {
+    return `<li>${this.name} (${this.season}, number ${this.number})</li>`;
   }
 }
 
@@ -79,12 +94,7 @@ async function getShowsByTerm(searchTerm) {
     // const image = null;
     //TODO: what am I doing wrong that makes it show.show?
     // console.log('show=', show.show.image.original)
-    const showCard = new Show(
-      show.show.id,
-      show.show.summary,
-      show.show.name,
-      show.show.image
-    );
+    const showCard = new Show(show.show);
 
     //   showCard.id = show.show.id;
     //   showCard.name = show.show.name;
@@ -121,13 +131,13 @@ function displayShows(shows) {
         <div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
          <div class="media">
            <img
-              src="${show.image || DEFAULT_IMAGE}"
-              alt="Bletchly Circle San Francisco"
+              src="${show.image}"
+              alt="Show Poster"
               class="w-25 me-3">
            <div class="media-body">
              <h5 class="text-primary">${show.name}</h5>
              <div><small>${show.summary}</small></div>
-             <button class="btn btn-outline-light btn-sm Show-getEpisodes">
+             <button id="${show.id}" class="btn btn-outline-light btn-sm Show-getEpisodes">
                Episodes
              </button>
            </div>
@@ -136,6 +146,9 @@ function displayShows(shows) {
       `);
 
     $showsList.append($show);
+
+    //FIXME: I was attempting to pass the show ID directly through the function chain (Do not reccomend lol)
+    // $('.Show-getEpisodes').on('click', handleEpisodeClick(show.id));
   }
 }
 
@@ -144,7 +157,7 @@ function displayShows(shows) {
  */
 
 async function searchShowsAndDisplay() {
-  const term = $("#searchForm-term").val();
+  const term = $('#searchForm-term').val();
   const shows = await getShowsByTerm(term);
 
   $episodesArea.hide();
@@ -152,19 +165,57 @@ async function searchShowsAndDisplay() {
 }
 
 /**handles click on submit button and calls searchShowAndDisplay */
-$searchForm.on("submit", async function handleSearchForm(evt) {
+$searchForm.on('submit', async function handleSearchForm(evt) {
   evt.preventDefault();
   await searchShowsAndDisplay();
 });
 
-/** Given a show ID, get from API and return (promise) array of episodes:
- *      { id, name, season, number }
+//
+
+//
+
+//
+
+//
+/**
+ * I tooled around for about an hour and got this far: some of it's ok but after looking at the solution I think there are some clear issues with the way I was trying to retrieve the showID and return the axios API request.
+ *
  */
 
-// async function getEpisodesOfShow(id) { }
+// /** getEpisodesOfShow() takes in the ID of a show and returns a promise array of episodes from tvmaze API.
+//  */
+// async function getEpisodesOfShow(id) {
+//   const episodes = await axios.get(`${BASE_URL}/shows/${id}/episodes`);
+//   console.log(episodes.data);
+//   return episodes.data; // returns array of episode objects
+// }
 
-/** Write a clear docstring for this function... */
+// /** displayEpisodes() takes in the episodes array promise from getEpisodesOfShow() and creates an instantiation of the class Episodes that is appended to the dom.
+//  */
+// function displayEpisodes(episodes) {
+//   $episodesArea.empty();
+//   const $episodesUl = $("<ul class='episodes'></ul>");
+//   console.log(episodes);
+//   for (const episode of episodes) {
+//     let newLi = new Episode(episode).giveMeAListItem();
+//     $episodesUl.append(newLi);
+//   }
+//   $episodesArea.append($episodesUl);
+//   $episodesArea.style.display = 'swag';
+// }
 
-// function displayEpisodes(episodes) { }
+// // add other functions that will be useful / match our structure & design
 
-// add other functions that will be useful / match our structure & design
+// function handleEpisodeClick(id) {
+//   const showId = id;
+//   let allEpisodes = getEpisodesOfShow(showId);
+//   displayEpisodes(allEpisodes);
+//   $episodesArea.show();
+//   // const episodeId = $('evt').val();
+//   // const episodes = await getEpisodesOfShow(term);
+// }
+
+// /**
+//  *  This function also makes the div visible by changing its jquery class.
+//  */
+// async function getAndDisplayEpisodes(id) {}
